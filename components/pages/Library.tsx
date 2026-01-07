@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { generateStudyMaterial } from '../../services/geminiService';
 import { StudyMaterial, Subject } from '../../types';
-import { BookOpen, Loader2, PlayCircle, StopCircle, Library as LibraryIcon, Volume2 } from 'lucide-react';
+import { BookOpen, Loader2, PlayCircle, StopCircle, Library as LibraryIcon, Volume2, AlertCircle } from 'lucide-react';
 import { GoogleGenAI, Modality } from '@google/genai';
 
 // Simple Markdown component wrapper
@@ -20,6 +20,7 @@ export const Library: React.FC = () => {
   const [subject, setSubject] = useState<Subject>(Subject.HISTORY);
   const [material, setMaterial] = useState<StudyMaterial | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Audio State
   const [playingState, setPlayingState] = useState<{type: 'summary' | 'word', id?: string}>({ type: 'summary' });
@@ -32,13 +33,21 @@ export const Library: React.FC = () => {
 
     setLoading(true);
     setMaterial(null);
+    setError(null);
     stopAudio();
 
-    const data = await generateStudyMaterial(topic, subject);
-    if (data) {
-      setMaterial(data);
+    try {
+      const data = await generateStudyMaterial(topic, subject);
+      if (data) {
+        setMaterial(data);
+      } else {
+        setError("Could not generate study material. Please try a different topic.");
+      }
+    } catch (e) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const decodeAudio = async (base64: string, ctx: AudioContext) => {
@@ -146,6 +155,12 @@ export const Library: React.FC = () => {
                   className="w-full p-2.5 rounded-lg border border-gray-200 bg-sand-50 focus:ring-2 focus:ring-primary-200 outline-none"
                 />
               </div>
+              {error && (
+                <div className="text-red-500 text-xs flex items-center gap-1 bg-red-50 p-2 rounded border border-red-100">
+                  <AlertCircle size={14} />
+                  {error}
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading || !topic.trim()}

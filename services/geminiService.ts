@@ -1,8 +1,20 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { QuizData, StudyMaterial, Subject } from "../types";
 
 // Helper to get AI instance
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+// Helper to clean JSON string from Markdown code blocks
+const cleanJSON = (text: string): string => {
+  if (!text) return "";
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "");
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```/, "").replace(/```$/, "");
+  }
+  return cleaned.trim();
+};
 
 export const generateTextResponse = async (
   prompt: string, 
@@ -27,7 +39,7 @@ export const generateTextResponse = async (
     return result.text || "I apologize, I couldn't generate a response.";
   } catch (error) {
     console.error("Gemini Chat Error:", error);
-    return "An error occurred while connecting to the tutor.";
+    return "An error occurred while connecting to the tutor. Please check your connection and try again.";
   }
 };
 
@@ -71,7 +83,7 @@ export const generateQuiz = async (topic: string, subject: Subject): Promise<Qui
 
     const text = response.text;
     if (!text) return null;
-    return JSON.parse(text) as QuizData;
+    return JSON.parse(cleanJSON(text)) as QuizData;
   } catch (error) {
     console.error("Gemini Quiz Error:", error);
     return null;
@@ -123,7 +135,7 @@ export const interpretVoiceAnswer = async (
       }
     });
 
-    const result = JSON.parse(response.text || "{}");
+    const result = JSON.parse(cleanJSON(response.text || "{}"));
     return typeof result.selectedIndex === 'number' ? result.selectedIndex : null;
   } catch (error) {
     console.error("Voice Interpret Error:", error);
@@ -172,7 +184,7 @@ export const generateStudyMaterial = async (topic: string, subject: Subject): Pr
 
     const text = response.text;
     if (!text) return null;
-    return JSON.parse(text) as StudyMaterial;
+    return JSON.parse(cleanJSON(text)) as StudyMaterial;
   } catch (error) {
     console.error("Material Generation Error:", error);
     return null;

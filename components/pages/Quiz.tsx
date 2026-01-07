@@ -8,6 +8,7 @@ export const Quiz: React.FC = () => {
   const [subject, setSubject] = useState<Subject>(Subject.MATH);
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
@@ -26,14 +27,22 @@ export const Quiz: React.FC = () => {
     setLoading(true);
     setQuizData(null);
     setShowResult(false);
+    setError(null);
     setScore(0);
     setCurrentQuestionIndex(0);
     
-    const data = await generateQuiz(topic, subject);
-    if (data) {
-      setQuizData(data);
+    try {
+      const data = await generateQuiz(topic, subject);
+      if (data) {
+        setQuizData(data);
+      } else {
+        setError("Could not generate quiz. Please try a different topic or try again.");
+      }
+    } catch (e) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleOptionSelect = (index: number) => {
@@ -147,6 +156,12 @@ export const Quiz: React.FC = () => {
                 className="w-full p-3 rounded-xl border border-gray-200 bg-sand-50 focus:ring-2 focus:ring-primary-200 outline-none"
               />
             </div>
+            {error && (
+              <div className="text-red-500 text-sm flex items-center justify-center gap-2 bg-red-50 p-3 rounded-lg border border-red-100">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
             <button
               type="submit"
               disabled={!topic.trim()}

@@ -24,6 +24,7 @@ export const Tutor: React.FC = () => {
   
   // Refs for Live API
   const audioContextRef = useRef<AudioContext | null>(null);
+  const inputAudioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const inputProcessorRef = useRef<ScriptProcessorNode | null>(null);
@@ -87,36 +88,51 @@ export const Tutor: React.FC = () => {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    if (inputAudioContextRef.current) {
+      inputAudioContextRef.current.close();
+      inputAudioContextRef.current = null;
+    }
     
-    // Note: We can't explicitly "close" the session promise object from the SDK easily 
-    // without the session object itself having a close method exposed cleanly in all states,
-    // but stopping the stream essentially kills the loop.
     setIsConnected(false);
     setIsVoiceActive(false);
     setVoiceStatus('Ready');
+    nextStartTimeRef.current = 0;
   }, []);
 
   const startVoiceSession = async () => {
     try {
-      setVoiceStatus('Connecting...');
+      setVoiceStatus('Initializing audio...');
       setIsVoiceActive(true);
       
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-      
-      // Initialize Audio Contexts
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const ac = new AudioContextClass({ sampleRate: 24000 }); // Output rate
+
+      // 1. Initialize Audio Contexts immediately to avoid autoplay policy issues
+      const ac = new AudioContextClass({ sampleRate: 24000 });
+      if (ac.state === 'suspended') {
+        await ac.resume();
+      }
       audioContextRef.current = ac;
+
+      const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+      if (inputCtx.state === 'suspended') {
+        await inputCtx.resume();
+      }
+      inputAudioContextRef.current = inputCtx;
       
-      // Input capture
+      // 2. Get Media Stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: {
         sampleRate: 16000,
         channelCount: 1,
-        echoCancellation: true
+        echoCancellation: true,
+        autoGainControl: true,
+        noiseSuppression: true
       }});
       mediaStreamRef.current = stream;
 
-      // Connect to Gemini Live
+      setVoiceStatus('Connecting to Gemini...');
+
+      // 3. Connect to Gemini Live
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: {
@@ -132,8 +148,7 @@ export const Tutor: React.FC = () => {
             setVoiceStatus('Listening');
             setIsConnected(true);
             
-            // Setup Audio Processing for Input
-            const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+            // 4. Setup Audio Processing for Input
             const source = inputCtx.createMediaStreamSource(stream);
             const processor = inputCtx.createScriptProcessor(4096, 1, 1);
             
@@ -145,8 +160,13 @@ export const Tutor: React.FC = () => {
               });
             };
             
+            // Prevent feedback loop: input -> processor -> gain(0) -> destination
+            const silence = inputCtx.createGain();
+            silence.gain.value = 0;
+
             source.connect(processor);
-            processor.connect(inputCtx.destination);
+            processor.connect(silence);
+            silence.connect(inputCtx.destination);
             
             inputProcessorRef.current = processor;
             sourceNodeRef.current = source;
@@ -154,17 +174,27 @@ export const Tutor: React.FC = () => {
           onmessage: async (msg: LiveServerMessage) => {
             const base64Audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && audioContextRef.current) {
-              const buffer = await decodeAudioData(base64Audio, audioContextRef.current);
-              
-              const source = audioContextRef.current.createBufferSource();
-              source.buffer = buffer;
-              source.connect(audioContextRef.current.destination);
-              
-              // Simple scheduling
-              const now = audioContextRef.current.currentTime;
-              const start = Math.max(now, nextStartTimeRef.current);
-              source.start(start);
-              nextStartTimeRef.current = start + buffer.duration;
+              try {
+                const buffer = await decodeAudioData(base64Audio, audioContextRef.current);
+                
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioContextRef.current.destination);
+                
+                const now = audioContextRef.current.currentTime;
+                // Schedule next chunk to play after previous one finishes
+                // If we fell behind (now > nextStartTime), reset to now
+                const start = Math.max(now, nextStartTimeRef.current);
+                source.start(start);
+                nextStartTimeRef.current = start + buffer.duration;
+              } catch (decodeErr) {
+                console.error("Audio decode error", decodeErr);
+              }
+            }
+
+            // Handle interruption (if the model or user interrupts)
+            if (msg.serverContent?.interrupted) {
+              nextStartTimeRef.current = 0;
             }
           },
           onclose: () => {
@@ -173,7 +203,7 @@ export const Tutor: React.FC = () => {
           },
           onerror: (err) => {
             console.error("Session error", err);
-            setVoiceStatus('Error');
+            setVoiceStatus('Connection Error');
             stopVoiceSession();
           }
         }
@@ -184,6 +214,7 @@ export const Tutor: React.FC = () => {
       console.error("Failed to start voice:", e);
       setVoiceStatus('Error starting voice');
       setIsVoiceActive(false);
+      stopVoiceSession();
     }
   };
 
