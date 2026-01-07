@@ -1,0 +1,7 @@
+{
+  "name": "UniTalk Academy",
+  "description": "A premium, AI-powered educational platform featuring multimodal tutoring, dynamic quizzes, and multilingual support.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
