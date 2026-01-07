@@ -42,10 +42,21 @@ export const Library: React.FC = () => {
   };
 
   const decodeAudio = async (base64: string, ctx: AudioContext) => {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return await ctx.decodeAudioData(bytes.buffer);
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const dataInt16 = new Int16Array(bytes.buffer);
+    const frameCount = dataInt16.length;
+    const buffer = ctx.createBuffer(1, frameCount, 24000);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i] / 32768.0;
+    }
+    return buffer;
   };
 
   const playTTS = async (text: string, type: 'summary' | 'word', id?: string) => {
