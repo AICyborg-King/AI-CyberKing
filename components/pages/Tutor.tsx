@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Subject, Message } from '../types';
+import { Subject, Message } from '../../types';
 import { Mic, MicOff, Send, Volume2, User, Bot, AlertCircle, GraduationCap } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { generateTextResponse } from '../services/geminiService';
+import { generateTextResponse } from '../../services/geminiService';
 
 export const Tutor: React.FC = () => {
   const [activeSubject, setActiveSubject] = useState<Subject>(Subject.MATH);
@@ -240,7 +240,7 @@ export const Tutor: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm overflow-x-auto no-scrollbar">
-          {Object.values(Subject).map((sub) => (
+          {(Object.values(Subject) as Subject[]).map((sub) => (
             <button
               key={sub}
               onClick={() => {

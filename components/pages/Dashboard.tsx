@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FeatureCard } from '../components/FeatureCard';
-import { AppMode } from '../types';
+import { FeatureCard } from './FeatureCard';
+import { AppMode } from '../../types';
 import { BookOpen, BrainCircuit, GraduationCap, Flame, Star, TrendingUp } from 'lucide-react';
 
 interface DashboardProps {

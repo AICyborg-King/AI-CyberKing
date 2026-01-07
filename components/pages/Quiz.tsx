@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { generateQuiz, interpretVoiceAnswer } from '../services/geminiService';
-import { Subject, QuizData } from '../types';
+import { generateQuiz, interpretVoiceAnswer } from '../../services/geminiService';
+import { Subject, QuizData } from '../../types';
 import { BrainCircuit, CheckCircle2, XCircle, ArrowRight, Loader2, RefreshCw, Mic, AlertCircle } from 'lucide-react';
 
 export const Quiz: React.FC = () => {
@@ -134,7 +134,7 @@ export const Quiz: React.FC = () => {
                 onChange={(e) => setSubject(e.target.value as Subject)}
                 className="w-full p-3 rounded-xl border border-gray-200 bg-sand-50 focus:ring-2 focus:ring-primary-200 outline-none"
               >
-                {Object.values(Subject).map(s => <option key={s} value={s}>{s}</option>)}
+                {(Object.values(Subject) as Subject[]).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>

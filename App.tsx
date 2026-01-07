@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Navigation } from './components/Navigation';
-import { Dashboard } from './pages/Dashboard';
-import { Tutor } from './pages/Tutor';
-import { Quiz } from './pages/Quiz';
-import { Library } from './pages/Library';
+import { Dashboard } from './components/pages/Dashboard';
+import { Tutor } from './components/pages/Tutor';
+import { Quiz } from './components/pages/Quiz';
+import { Library } from './components/pages/Library';
 import { AppMode } from './types';
 import { Menu, X } from 'lucide-react';
 
