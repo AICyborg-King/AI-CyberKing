@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { QuizData, StudyMaterial, Subject } from "../types";
 
 // Helper to get AI instance
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
 export const generateTextResponse = async (
   prompt: string, 

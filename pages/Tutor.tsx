@@ -101,7 +101,7 @@ export const Tutor: React.FC = () => {
       setVoiceStatus('Connecting...');
       setIsVoiceActive(true);
       
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       
       // Initialize Audio Contexts
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
